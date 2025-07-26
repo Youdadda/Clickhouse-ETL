@@ -43,7 +43,8 @@ This project provides an ETL pipeline to migrate data from OpenSearch to ClickHo
 Run the migration pipeline with:
 
 ```bash
-python pipeline.py
+cd Pipeline
+python migration.py
 ```
 
 This will connect to the configured OpenSearch and ClickHouse instances, extract data, perform any necessary transformations, and load it into ClickHouse.
