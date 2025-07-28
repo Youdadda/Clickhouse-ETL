@@ -49,13 +49,7 @@ python migration.py
 
 This will connect to the configured OpenSearch and ClickHouse instances, extract data, perform any necessary transformations, and load it into ClickHouse.
 
-## Customization
 
-- **Transformation Logic:**  
-  Modify the transformation step in `pipeline.py` to suit your data requirements.
-
-- **Index/Table Names:**  
-  Update the source OpenSearch index and target ClickHouse table names in the configuration section of `pipeline.py`.
 
 ## Troubleshooting
 
