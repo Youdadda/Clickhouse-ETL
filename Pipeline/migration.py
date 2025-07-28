@@ -1,6 +1,6 @@
 #### WinlogBeat table
 from infi.clickhouse_orm import Database
-from tableschemas import Winlogbeat
+from tableschemas import winlog_table_schema
 from config import pipeline_logger
 import requests
 import json
@@ -21,12 +21,13 @@ client = OpenSearch(
 )
 
  
-creation = Create_clickhouse_table(
-    database_name=os.environ.get("ClickHouse_DATABASE"),
-    db_url=f'http://{os.environ.get("ClickHouse_HOST")}:{os.environ.get("ClickHouse_PORT_ORM")}/',
-    table=Winlogbeat,
+clickhouse_client ,creation = Create_clickhouse_table(
+    database=os.environ.get("ClickHouse_DATABASE"),
+    host=os.environ.get("ClickHouse_HOST"),
+    port = os.environ.get("ClickHouse_PORT_DRIVER"),
+    table_schema=winlog_table_schema,
     password=os.environ.get("ClickHouse_PASSWORD"),
-    user_name=os.environ.get("ClickHouse_USER")
+    user=os.environ.get("ClickHouse_USER")
 
 )
 
@@ -42,44 +43,46 @@ clickhouse_client = Client(
     password=os.environ.get("ClickHouse_PASSWORD"),
     database=os.environ.get("ClickHouse_DATABASE")
 )
-while True:
-    body = {
-        "size": batch_size,
-        "sort": [{ "@timestamp": "asc" }, { "_id": "asc" }],
-        "query": {
-            "match_all": {}
+if creation:
+    while True:
+        body = {
+            "size": batch_size,
+            "sort": [{ "@timestamp": "asc" }, { "_id": "asc" }],
+            "query": {
+                "match_all": {}
+            }
         }
-    }
 
-    if search_after:
-        body["search_after"] = search_after
+        if search_after:
+            body["search_after"] = search_after
 
-    response = client.search(index=index, body=body)
+        response = client.search(index=index, body=body)
 
-    hits = response['hits']['hits']
-    if not hits:
-        break
-    rows = []
-    # Process your batch
-    for doc in hits:
-        rows.append(extract_columns(doc['_source']))
+        hits = response['hits']['hits']
+        if not hits:
+            break
+        rows = []
+        # Process your batch
+        for doc in hits:
+            rows.append(extract_columns(doc['_source']))
 
-    # Prepare search_after for the next page
-    search_after = hits[-1]['sort']
-    
-    try:
-        write_data_to_clickhouse(
-            host=os.environ.get("ClickHouse_HOST"),
-            port=os.environ.get("ClickHouse_PORT_DRIVER"),
-            password=os.environ.get("ClickHouse_PASSWORD"),
-            database=os.environ.get("ClickHouse_DATABASE"),
-            rows=rows,
-            user=os.environ.get("ClickHouse_USER"),
-            table=Winlogbeat
-            
-        ) 
-        pipeline_logger.info("rows pushed successfully!")
-            
-    except Exception as e:
-        pipeline_logger.error(f"We had a poblem pushing the row because : {e}")
- 
+        # Prepare search_after for the next page
+        search_after = hits[-1]['sort']
+        
+        try:
+            write_data_to_clickhouse(
+                host=os.environ.get("ClickHouse_HOST"),
+                port=os.environ.get("ClickHouse_PORT_DRIVER"),
+                password=os.environ.get("ClickHouse_PASSWORD"),
+                database=os.environ.get("ClickHouse_DATABASE"),
+                rows=rows,
+                user=os.environ.get("ClickHouse_USER"),
+                table_schema=winlog_table_schema
+                
+            ) 
+            pipeline_logger.info("rows pushed successfully!")
+                
+        except Exception as e:
+            pipeline_logger.error(f"We had a poblem pushing the row because : {e}")
+else:
+    print("Error creating the table in ClickHouse, check logs!")
